@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: redis-coupon-issue
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/coupon_issue?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=utf8
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: coupon_user
+    password: coupon_password
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+coupon:
+  issue:
+    stream-key: coupon:issue:stream
+    group: coupon-issue-group
+    consumer: coupon-issue-worker-1
