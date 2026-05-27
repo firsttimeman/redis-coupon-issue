@@ -5,6 +5,7 @@ import com.example.coupon.api.CouponIssueCreateResponse;
 import com.example.coupon.api.CouponIssueResponse;
 import com.example.coupon.domain.CouponIssue;
 import com.example.coupon.domain.CouponIssueRepository;
+import com.example.coupon.exception.CouponIssueNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +36,7 @@ public class CouponIssueService {
     @Transactional(readOnly = true)
     public CouponIssueResponse get(Long couponIssueId) {
         CouponIssue couponIssue = couponIssueRepository.findById(couponIssueId)
-                .orElseThrow(() -> new IllegalArgumentException("couponIssueId " + couponIssueId + " not found"));
+                .orElseThrow(() -> new CouponIssueNotFoundException(couponIssueId));
 
         return CouponIssueResponse.from(couponIssue);
     }
