@@ -9,3 +9,15 @@ out/
 
 .DS_Store
 *.log
+
+# Local/private configuration
+.env
+.env.*
+!.env.example
+application-local.yml
+application-secret.yml
+application-prod.yml
+
+# Project notes
+*.md
+!README.md

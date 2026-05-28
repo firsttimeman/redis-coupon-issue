@@ -2,6 +2,7 @@ package com.example.coupon.redis;
 
 import com.example.coupon.domain.CouponIssue;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.connection.stream.RecordId;
 import org.springframework.data.redis.connection.stream.StreamRecords;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CouponIssueStreamProducer {
@@ -37,8 +39,14 @@ public class CouponIssueStreamProducer {
                 .ofMap(message)
                 .withStreamKey(properties.streamKey());
 
+        log.info("Publishing coupon issue to Redis Stream. streamKey={}, couponIssueId={}",
+                properties.streamKey(),
+                couponIssue.getId());
 
         // Redis가 생성한 메시지 ID인 RecordId를 반환한다.
-        return stringRedisTemplate.opsForStream().add(record);
+        RecordId recordId = stringRedisTemplate.opsForStream().add(record);
+        log.info("Published coupon issue message. recordId={}", recordId);
+
+        return recordId;
     }
 }

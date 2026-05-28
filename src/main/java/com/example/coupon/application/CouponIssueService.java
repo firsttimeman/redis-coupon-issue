@@ -6,15 +6,19 @@ import com.example.coupon.api.CouponIssueResponse;
 import com.example.coupon.domain.CouponIssue;
 import com.example.coupon.domain.CouponIssueRepository;
 import com.example.coupon.exception.CouponIssueNotFoundException;
+import com.example.coupon.redis.CouponIssueStreamProducer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CouponIssueService {
 
     private final CouponIssueRepository couponIssueRepository;
+    private final CouponIssueStreamProducer couponIssueStreamProducer;
 
 
     @Transactional
@@ -27,6 +31,10 @@ public class CouponIssueService {
                 .build();
 
         CouponIssue saved = couponIssueRepository.save(couponIssue);
+        log.info("Saved coupon issue. couponIssueId={}", saved.getId());
+
+        couponIssueStreamProducer.publish(saved);
+
         return new CouponIssueCreateResponse(
                 saved.getId(),
                 saved.getStatus()
