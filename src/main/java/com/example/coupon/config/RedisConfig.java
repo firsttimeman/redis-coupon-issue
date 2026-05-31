@@ -1,5 +1,6 @@
-package com.example.coupon.redis;
+package com.example.coupon.config;
 
+import com.example.coupon.redis.CouponIssueStreamProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
