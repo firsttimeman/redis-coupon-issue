@@ -77,10 +77,15 @@ public class CouponIssue {
     public void startProcessing() {
         this.status = CouponIssueStatus.PROCESSING;
     }
+
     public void complete(String issuedCouponCode) {
         this.issuedCouponCode = issuedCouponCode;
         this.status = CouponIssueStatus.SUCCESS;
         this.processedAt = LocalDateTime.now();
+    }
+
+    public boolean isSuccess() {
+        return this.status == CouponIssueStatus.SUCCESS;
     }
 
     public void fail(String errorMessage) {
@@ -88,6 +93,4 @@ public class CouponIssue {
         this.errorMessage = errorMessage;
         this.retryCount++;
     }
-
-
 }

@@ -4,6 +4,7 @@ import com.example.coupon.application.CouponIssueProcessSkipException;
 import com.example.coupon.application.CouponIssueProcessor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Range;
 import org.springframework.data.redis.connection.stream.*;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,6 +17,10 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class CouponIssueStreamWorker {
+
+    private static final Duration READ_BLOCK_TIME = Duration.ofSeconds(1);
+    private static final Duration PENDING_MESSAGE_MIN_IDLE_TIME = Duration.ofSeconds(10);
+    private static final long PENDING_MESSAGE_READ_COUNT = 10;
 
     // Redis Stream에서 메시지를 읽고 ACK 하기 위해 사용한다.
     private final StringRedisTemplate stringRedisTemplate;
@@ -37,7 +42,7 @@ public class CouponIssueStreamWorker {
                         Consumer.from(group, consumer),
                         StreamReadOptions.empty()
                                 .count(1)
-                                .block(Duration.ofSeconds(1)),
+                                .block(READ_BLOCK_TIME),
                         StreamOffset.create(streamKey, ReadOffset.lastConsumed())
                 );
 
@@ -45,7 +50,55 @@ public class CouponIssueStreamWorker {
             return;
         }
 
-        MapRecord<String, Object, Object> record = records.get(0);
+        records.forEach(record -> processRecord(streamKey, group, record));
+    }
+
+    @Scheduled(fixedDelay = 5000)
+    public void reclaimPendingMessages() {
+        String streamKey = properties.streamKey();
+        String group = properties.group();
+        String consumer = properties.consumer();
+
+        PendingMessages pending = stringRedisTemplate.opsForStream()
+                .pending(streamKey, group, Range.unbounded(), PENDING_MESSAGE_READ_COUNT);
+
+        if (pending == null || pending.isEmpty()) {
+            return;
+        }
+
+        List<RecordId> recordIds = pending.stream()
+                .filter(message -> message.getElapsedTimeSinceLastDelivery()
+                        .compareTo(PENDING_MESSAGE_MIN_IDLE_TIME) >= 0)
+                .map(PendingMessage::getId)
+                .toList();
+
+        if (recordIds.isEmpty()) {
+            return;
+        }
+
+        log.info("Reclaiming pending coupon issue messages. streamKey={}, group={}, consumer={}, recordIds={}",
+                streamKey,
+                group,
+                consumer,
+                recordIds);
+
+        List<MapRecord<String, Object, Object>> claimedRecords = stringRedisTemplate.opsForStream()
+                .claim(
+                        streamKey,
+                        group,
+                        consumer,
+                        PENDING_MESSAGE_MIN_IDLE_TIME,
+                        recordIds.toArray(RecordId[]::new)
+                );
+
+        if (claimedRecords == null || claimedRecords.isEmpty()) {
+            return;
+        }
+
+        claimedRecords.forEach(record -> processRecord(streamKey, group, record));
+    }
+
+    private void processRecord(String streamKey, String group, MapRecord<String, Object, Object> record) {
         Long couponIssueId;
 
         try {

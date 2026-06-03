@@ -19,6 +19,11 @@ public class CouponIssueProcessor {
         CouponIssue couponIssue = couponIssueRepository.findById(couponIssueId)
                 .orElseThrow(() -> new CouponIssueProcessSkipException(couponIssueId));
 
+        if (couponIssue.isSuccess()) {
+            log.info("Coupon issue already completed. couponIssueId={}", couponIssueId);
+            return;
+        }
+
         couponIssue.startProcessing();
 
         String issuedCouponCode = "COUPON-" + couponIssueId;
