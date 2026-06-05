@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -16,15 +18,14 @@ public class CouponIssueProcessor {
 
     @Transactional
     public void process(Long couponIssueId) {
-        CouponIssue couponIssue = couponIssueRepository.findById(couponIssueId)
-                .orElseThrow(() -> new CouponIssueProcessSkipException(couponIssueId));
+        int updatedCount = couponIssueRepository.startProcessingIfPending(couponIssueId, LocalDateTime.now());
 
-        if (couponIssue.isSuccess()) {
-            log.info("Coupon issue already completed. couponIssueId={}", couponIssueId);
-            return;
+        if (updatedCount == 0) {
+            throw new CouponIssueProcessSkipException(couponIssueId);
         }
 
-        couponIssue.startProcessing();
+        CouponIssue couponIssue = couponIssueRepository.findById(couponIssueId)
+                .orElseThrow(() -> new CouponIssueProcessSkipException(couponIssueId));
 
         String issuedCouponCode = "COUPON-" + couponIssueId;
 

@@ -88,9 +88,28 @@ public class CouponIssue {
         return this.status == CouponIssueStatus.SUCCESS;
     }
 
-    public void fail(String errorMessage) {
-        this.status = CouponIssueStatus.FAILED;
-        this.errorMessage = errorMessage;
+    public boolean isFailed() {
+        return this.status == CouponIssueStatus.FAILED;
+    }
+
+    public boolean isFinished() {
+        return isSuccess() || isFailed();
+    }
+
+    public void recordFailure(String errorMessage, int maxRetryCount) {
         this.retryCount++;
+        this.errorMessage = errorMessage;
+
+        if (this.retryCount >= maxRetryCount) {
+            this.status = CouponIssueStatus.FAILED;
+            this.processedAt = LocalDateTime.now();
+            return;
+        }
+
+        this.status = CouponIssueStatus.PENDING;
+    }
+
+    public void recoverToPending() {
+        this.status = CouponIssueStatus.PENDING;
     }
 }

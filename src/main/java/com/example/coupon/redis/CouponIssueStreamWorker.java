@@ -1,5 +1,6 @@
 package com.example.coupon.redis;
 
+import com.example.coupon.application.CouponIssueFailureHandler;
 import com.example.coupon.application.CouponIssueProcessSkipException;
 import com.example.coupon.application.CouponIssueProcessor;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,8 @@ public class CouponIssueStreamWorker {
 
     // 메시지 안의 couponIssueId를 실제 쿠폰 발급 처리로 연결한다.
     private final CouponIssueProcessor couponIssueProcessor;
+
+    private final CouponIssueFailureHandler couponIssueFailureHandler;
 
     @Scheduled(fixedDelay = 1000)
     public void poll() {
@@ -126,6 +129,14 @@ public class CouponIssueStreamWorker {
                     record.getId(),
                     couponIssueId,
                     exception);
+
+            boolean shouldAcknowledge = couponIssueFailureHandler.recordFailure(couponIssueId, exception);
+
+            if (shouldAcknowledge) {
+                acknowledge(streamKey, group, record);
+                return;
+            }
+
             throw exception;
         }
     }
